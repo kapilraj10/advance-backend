@@ -8,16 +8,23 @@ const advanceRoutes = require('./routes/advances');
 const app = express();
 // CORS configuration
 // Allow origins from env variable CORS_ORIGINS (comma-separated) or default to Vite dev server origin.
-const allowedOrigins = (process.env.CORS_ORIGINS || 'http://localhost:5173').split(',').map(s => s.trim()).filter(Boolean);
+// enable preflight for all routes
+const rawOrigins = (process.env.CORS_ORIGINS || '').trim();
+const allowAll = rawOrigins === '*' || rawOrigins === '' || process.env.NODE_ENV === 'development';
+let allowedOrigins = [];
+if (!allowAll) {
+    allowedOrigins = rawOrigins.split(',').map(s => s.trim()).filter(Boolean);
+}
+
 const corsOptions = {
     origin: function (origin, callback) {
-        // allow requests with no origin (like mobile apps, curl, postman)
+        // allow requests with no origin (like curl, Postman, or same-origin server-to-server)
         if (!origin) return callback(null, true);
+        if (allowAll) return callback(null, true);
         if (allowedOrigins.indexOf(origin) !== -1) {
             return callback(null, true);
-        } else {
-            return callback(new Error('CORS policy: Origin not allowed'), false);
         }
+        return callback(new Error('CORS policy: Origin not allowed'), false);
     },
     credentials: true,
     optionsSuccessStatus: 200,
